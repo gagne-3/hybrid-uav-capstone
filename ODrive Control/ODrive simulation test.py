@@ -22,10 +22,6 @@ request_state(odrv0.axis0, AxisState.CLOSED_LOOP_CONTROL)
 # Reset Current Position to 0
 odrv0.axis0.pos_estimate = 0
 
-# Live Plotter
-#start_liveplotter(properties=[odrv0.axis0._pos_estimate_property])
-
-
 # Ramp up velocity over time
 try: 
     for i in range(50):

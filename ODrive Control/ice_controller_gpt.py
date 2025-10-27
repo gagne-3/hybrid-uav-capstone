@@ -1,17 +1,8 @@
-# ice_controller.py
-"""
-ICE controller for an ODrive axis.
-Runs independently. Uses only local sensors (encoder velocity, motor current) to
-decide when the ICE 'starts'.
-"""
-
 import time
 import math
 import odrive
 from odrive.enums import AXIS_STATE_FULL_CALIBRATION_SEQUENCE, AXIS_STATE_CLOSED_LOOP_CONTROL
-import fibre
 import signal
-import sys
 
 # ---------- CONFIG ----------
 AXIS_INDEX = 0                # 0 or 1 depending which axis on the ODrive this ICE is connected to

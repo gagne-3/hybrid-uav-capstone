@@ -1,15 +1,8 @@
-# starter_controller.py
-"""
-Starter/Generator controller for an ODrive axis.
-Independent state machine; uses only its own sensors to decide when to switch to generator mode.
-"""
-
 import time
 import math
 import odrive
 from odrive.enums import AXIS_STATE_FULL_CALIBRATION_SEQUENCE, AXIS_STATE_CLOSED_LOOP_CONTROL
 import signal
-import sys
 
 # ---------- CONFIG ----------
 AXIS_INDEX = 1                # axis of the ODrive for starter/generator

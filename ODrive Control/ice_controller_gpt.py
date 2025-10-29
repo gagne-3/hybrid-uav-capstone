@@ -1,7 +1,7 @@
 import time
 import math
 import odrive
-from odrive.enums import AXIS_STATE_FULL_CALIBRATION_SEQUENCE, AXIS_STATE_CLOSED_LOOP_CONTROL
+from odrive.enums import AxisState
 import signal
 
 # ---------- CONFIG ----------
@@ -20,19 +20,23 @@ TORQUE_RAMP_TIME = 2.0        # time to ramp engine torque up after start, secon
 
 running = True
 
+
 def sigint_handler(sig, frame):
     global running
     running = False
 
+
 signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGTERM, sigint_handler)
 
+
 def find_odrive_and_axis():
     print("Finding an ODrive... (this script expects to run on a machine connected to one ODrive)")
-    odrv = odrive.find_any(timeout=10)
-    print("Found ODrive:", odrv.serial_number)
-    axis = odrv.axis0 if AXIS_INDEX == 0 else odrv.axis1
-    return odrv, axis
+    odrv0 = odrive.find_any(timeout=10)
+    print("Found ODrive:", odrv0.serial_number)
+    axis = odrv0.axis0 if AXIS_INDEX == 0 else odrv0.axis1
+    return odrv0, axis
+
 
 def ensure_calibrated(axis):
     # If not calibrated, run full calibration
@@ -44,17 +48,18 @@ def ensure_calibrated(axis):
         pass
 
     print("Starting full calibration sequence...")
-    axis.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+    axis.requested_state = AxisState.FULL_CALIBRATION_SEQUENCE
     # wait until ready
     while True:
         st = axis.current_state
         # states: you'll see transitions; wait until closed loop possible
-        if st == AXIS_STATE_CLOSED_LOOP_CONTROL:
+        if st == AxisState.CLOSED_LOOP_CONTROL:
             break
         if not running:
             raise SystemExit("Aborted during calibration")
         time.sleep(0.1)
     print("Calibration complete, axis in closed loop.")
+
 
 def nm_from_measured_current(axis):
     # torque = Iq_measured * motor.config.torque_constant
@@ -65,6 +70,7 @@ def nm_from_measured_current(axis):
     except Exception:
         return 0.0
 
+
 def rpm_from_velocity(axis):
     # axis.encoder.vel_estimate is in rev/s per docs; convert to RPM
     try:
@@ -73,9 +79,11 @@ def rpm_from_velocity(axis):
     except Exception:
         return 0.0
 
+
 def set_torque(axis, torque_nm):
     # ODrive controller accepts torque setpoint in Nm via axis.controller.input_torque
     axis.controller.input_torque = float(torque_nm)
+
 
 def safe_check(axis):
     # read some safety telemetry and return False if unsafe
@@ -92,12 +100,13 @@ def safe_check(axis):
         print("Safety read error:", e)
     return True
 
+
 def main_loop():
-    odrv, axis = find_odrive_and_axis()
+    odrv0, axis = find_odrive_and_axis()
     ensure_calibrated(axis)
 
     # Ensure closed loop
-    axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
     print("Entered closed loop control. Starting ICE state machine.")
 
     state = "CRANKING"
@@ -169,6 +178,7 @@ def main_loop():
     except Exception:
         pass
     print("ICE controller exiting cleanly.")
+
 
 if __name__ == "__main__":
     main_loop()

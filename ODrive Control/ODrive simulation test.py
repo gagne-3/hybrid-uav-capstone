@@ -2,7 +2,7 @@ import math
 import time
 
 import odrive
-from odrive.enums import *
+from odrive.enums import * 
 from odrive.utils import *
 from odrive.device_manager import *
 

@@ -2,7 +2,7 @@ import time
 import math
 import odrive
 
-from odrive.enums import AxisState
+from odrive.enums import AxisState, ControlMode
 
 import signal
 
@@ -84,6 +84,8 @@ def main_loop():
     axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
     print("Entered closed loop control. Starting ICE state machine.")
 
+    axis.controller.config.control_mode = ControlMode.TORQUE_CONTROL
+
     state = "CRANKING"
     cranking_start_time = time.time()
     start_detected_time = None
@@ -150,6 +152,7 @@ def main_loop():
     # cleanup
     try:
         set_torque(axis, 0.0)
+        axis.requested_state = AxisState.IDLE
     except Exception:
         pass
     print("ICE controller exiting cleanly.")

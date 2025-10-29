@@ -1,38 +1,71 @@
 import odrive
-import time
-import math
-import signal
+from odrive.enums import AXIS_STATE_CLOSED_LOOP_CONTROL
 
-from odrive.enums import *
-from odrive.utils import *
-from odrive.device_manager import *
-
-# ---------- CONFIG ----------
-AXIS_INDEX = 1                # axis of the ODrive for starter/generator
-ASSIST_TORQUE_NM = 8.0        # positive torque applied while cranking to assist starter
-GEN_MAX_NEG_TORQUE_NM = -12.0 # maximum allowed negative torque (generator braking)
-GEN_TORQUE_LIMIT_NEG = -20.0  # safety hard limit
-ASSIST_RPM_TARGET = 150.0     # optionally aim to maintain this RPM while cranking
-DETECTION_RPM_INCREASE = 50.0 # if RPM increases by this much (from baseline) detect reduced load
-SAMPLE_INTERVAL = 0.02
-MEASURE_WINDOW = 0.2
-MAX_CURRENT_A = 40.0
-MAX_RPM = 5000.0              # safety(Based off previous groups work)
-# ----------------------------
+ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
 
 running = True
+state = "IDLE"
 
-def sigint_handler(sig, frame):
-    global running
-    running = False
+def find_odrive():
+    print(f"Searching for ODrive: {ODRV_SN}")
+    odrv = odrive.find_sync(serial_number=ODRV_SN, timeout=10)
 
-signal.signal(signal.SIGINT, sigint_handler)
-signal.signal(signal.SIGTERM, sigint_handler)
+    print(f"Found ODrive: {odrv.serial_number}")
+    axis = odrv.axis0
 
-def find_odrive_and_axis():
-    print("Finding an ODrive for starter... ")
-    odrv0 = odrive.find_any(timeout=10)
-    print("Found ODrive:", odrv0._dev.serial_number)
-    axis = odrv0.axis0 if AXIS_INDEX == 0 else odrv0.axis1
-    return odrv0, axis
+    return odrv, axis
 
+def check_calibration():
+    print("Checking motor calibration...")
+    if axis.motor.is_calibrated and axis.encoder.is_ready:
+        print("Calibration check success!")
+        return
+    raise SystemExit("Calibration check failure: please check motor calibration")
+
+def is_safe():
+    return True
+
+if __name__ == "__main__":
+    print("Starter/Generator Unit Control Program")
+    print("Initializing...")
+    odrv, axis = find_odrive()
+    check_calibration()
+    print("Initialization Complete")
+
+    axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    print("Axis in closed loop control")
+
+    state = "IDLE"
+    print("Starting state machine...")
+    print("State: IDLE")
+
+    while running:
+        if not is_safe():
+            print("Unsafe condition: exiting now...")
+            break
+
+        if state == "IDLE":
+            print("Please select next step:")
+            print("1) Begin startup routine")
+            print("2) Exit")
+            user_input = input()
+            if user_input == "1":
+                print("Startup routine beginning...")
+                print("State: START")
+            elif user_input == "2":
+                print("Exiting now...")
+                break;
+            else:
+                print("Invalid input: please try again")
+
+        elif state == "START":
+            print()
+
+        elif state == "GENERATE":
+            print()
+
+        else:
+            print("Undefined state: check program, exiting now...")
+            break
+
+    print("Exited Starter/Generator Unit Control Program")

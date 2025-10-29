@@ -1,7 +1,10 @@
+import math
 import odrive
-from odrive.enums import AXIS_STATE_CLOSED_LOOP_CONTROL
+from odrive.enums import AxisState, ControlMode
 
 ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
+MAX_CURRENT = 20
+MAX_RPM = 3000
 
 running = True
 state = "IDLE"
@@ -9,31 +12,61 @@ state = "IDLE"
 def find_odrive():
     print(f"Searching for ODrive: {ODRV_SN}")
     odrv = odrive.find_sync(serial_number=ODRV_SN, timeout=10)
-
     print(f"Found ODrive: {odrv.serial_number}")
+
     axis = odrv.axis0
 
     return odrv, axis
 
-def check_calibration():
-    print("Checking motor calibration...")
-    if axis.motor.is_calibrated and axis.encoder.is_ready:
-        print("Calibration check success!")
-        return
-    raise SystemExit("Calibration check failure: please check motor calibration")
+def get_rpm(axis):
+    rpm = axis.vel_estimate * 60.0 # convert Rev/s to RPM
+    return rpm
+
+def get_rad(axis):
+    rad = (get_rpm(axis) * 2.0 * math.pi) / 60.0 # convert RPM to rad/s
+    return rad
+
+def get_current(axis):
+    Iq = axis.motor.foc.Iq_measured
+    return Iq
+
+def get_torque(axis):
+    T = axis.motor.torque_estimate
+    return T
+
+def set_torque(axis, T):
+    if axis.controller.config.control_mode == ControlMode.TORQUE_CONTROL:
+        axis.controller.input_torque = T
+    else:
+        print("Warning: axis not in torque control mode. Unable to set desired torque.")
+    return
 
 def is_safe():
+    try:
+        if abs(get_current(axis)) > MAX_CURRENT:
+            print("Unsafe condition: current exceeds maximum current")
+            return False
+        
+        if abs(get_rpm(axis)) > MAX_RPM:
+            print("Unsafe condition: RPM exceeds maximum RPM")
+            return False
+        
+    except Exception as e:
+        print("Unsafe Condition:", e)
+        return False
+    
     return True
 
 if __name__ == "__main__":
     print("Starter/Generator Unit Control Program")
     print("Initializing...")
     odrv, axis = find_odrive()
-    check_calibration()
     print("Initialization Complete")
 
-    axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-    print("Axis in closed loop control")
+    axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
+    axis.controller.config.control_mode = ControlMode.TORQUE_CONTROL
+    set_torque(axis, 0.0)
+    print("Axis in closed-loop torque control mode")
 
     state = "IDLE"
     print("Starting state machine...")
@@ -41,8 +74,7 @@ if __name__ == "__main__":
 
     while running:
         if not is_safe():
-            print("Unsafe condition: exiting now...")
-            break
+            raise SystemExit("Unsafe condition: exiting now...")
 
         if state == "IDLE":
             print("Please select next step:")
@@ -68,4 +100,6 @@ if __name__ == "__main__":
             print("Undefined state: check program, exiting now...")
             break
 
+    set_torque(axis, 0.0)
+    axis.requested_state = AxisState.IDLE
     print("Exited Starter/Generator Unit Control Program")

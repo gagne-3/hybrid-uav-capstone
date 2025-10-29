@@ -42,9 +42,8 @@ def find_odrive_and_axis():
 def nm_from_measured_current(axis):
     # torque = Iq_measured * motor.config.torque_constant
     try:
-        iq = axis.motor.current_control.Iq_measured
-        tc = axis.motor.config.torque_constant
-        return iq * tc
+        t = axis.motor.torque_estimate
+        return t
     except Exception:
         return 0.0
     
@@ -65,7 +64,7 @@ def set_torque(axis, torque_nm):
 def safe_check(axis):
     # read some safety telemetry and return False if unsafe
     try:
-        iq = abs(axis.motor.current_control.Iq_measured)
+        iq = abs(axis.motor.foc.Iq_measured)
         rpm = abs(rpm_from_velocity(axis))
         if iq > MAX_CURRENT_A + 2.0:
             print("SAFETY: measured current too high:", iq)

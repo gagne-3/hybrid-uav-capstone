@@ -1,83 +1,139 @@
-import time
 import math
 import odrive
+import keyboard
+from odrive.enums import AxisState, ControlMode, InputMode
 
-from odrive.enums import AxisState, ControlMode
+ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
 
-import signal
-
-# ---------- CONFIG ----------
-AXIS_INDEX = 0                # 0 or 1 depending which axis on the ODrive this ICE is connected to
-CRANK_TORQUE_NM = -5.0        # negative torque (Nm) applied during cranking
-ENGINE_TORQUE_PEAK_NM = 15.0  # steady positive torque after startup
-START_RPM_THRESHOLD = 200.0   # detect start when RPM exceeds this
-START_HOLD_SECONDS = 0.5      # must hold above RPM threshold for this long
-DETECT_TORQUE_DROP_NM = 2.0   # optional: detect when measured torque drops by this (Nm)
-SAMPLE_INTERVAL = 0.02        # seconds
-MAX_CURRENT_A = 40.0          # safety
-MAX_RPM = 4500.0              # safety (motor RPM)
-STARTUP_TIMEOUT = 10.0        # fallback: if not started within this many seconds, stop
-TORQUE_RAMP_TIME = 2.0        # time to ramp engine torque up after start, seconds
-# ----------------------------
+MAX_CURRENT = 20.0           # Absolute maximum input/output current to/from the motor
+CRANK_TORQUE = -5.0          # negative torque (Nm) applied during cranking
+MAX_RPM = 3000               # Absolute maximum RPM of motor
+STARTING_RPM_THRESHOLD = 1   # Speed at which ICE can be determined to be starting
+RUNNING_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
+RUNNING_RPM = 2000           # Speed at which the ICE runs at
+SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
 
 running = True
+mode = "IDLE"
 
+def find_odrive():
+    print(f"Searching for ODrive: {ODRV_SN}")
+    odrv = odrive.find_sync(serial_number=ODRV_SN, timeout=10)
+    print(f"Found ODrive: {odrv.serial_number}")
 
-def sigint_handler(sig, frame):
-    global running
-    running = False
+    axis = odrv.axis0
+    axis.requested_state = AxisState.IDLE
 
-
-signal.signal(signal.SIGINT, sigint_handler)
-signal.signal(signal.SIGTERM, sigint_handler)
-
-
-def find_odrive_and_axis():
-    print("Finding an ODrive... (this script expects to run on a machine connected to one ODrive)")
-    odrv0 = odrive.find_any(timeout=10)
-    print("Found ODrive:", odrv0.serial_number)
-    axis = odrv0.axis0
-    return odrv0, axis
-
-def nm_from_measured_current(axis):
-    # torque = Iq_measured * motor.config.torque_constant
-    try:
-        t = axis.motor.torque_estimate
-        return t
-    except Exception:
-        return 0.0
+    return odrv, axis
     
-def rpm_from_velocity(axis):
-    # axis.encoder.vel_estimate is in rev/s per docs; convert to RPM
+def get_rpm(axis):
+    rpm = axis.vel_estimate * 60.0 # convert Rev/s to RPM
+    return rpm
+
+def get_rad(axis):
+    rad = axis.vel_estimate * 2.0 * math.pi # convert Rev/s to rad/s
+    return rad
+
+def get_current(axis):
+    Iq = axis.motor.foc.Iq_measured
+    return Iq
+
+def get_torque(axis):
+    T = axis.motor.torque_estimate
+    return T
+
+def set_rpm(axis, rpm):
+    if axis.controller.config.control_mode == ControlMode.VELOCITY_CONTROL:
+        axis.controller.input_mode = InputMode.VEL_RAMP
+        axis.controller.input_vel = rpm
+        print(f"Axis velocity set to {rpm} RPM")
+    else:
+        print("Warning: axis not in velocity control mode. Unable to set desired velocity.")
+    return
+
+def set_torque(axis, T):
+    if axis.controller.config.control_mode == ControlMode.TORQUE_CONTROL:
+        axis.controller.input_torque = T
+        print(f"Axis torque set to {T}")
+    else:
+        print("Warning: axis not in torque control mode. Unable to set desired torque.")
+    return
+
+def start_closed_loop_rpm_control(axis, rpm):
+    axis.controller.config.control_mode = ControlMode.VELOCITY_CONTROL
+    set_rpm(axis, rpm)
+    axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
+    print("Axis in closed-loop velocity control mode")
+    return
+
+def start_closed_loop_torque_control(axis, T):
+    axis.controller.config.control_mode = ControlMode.TORQUE_CONTROL
+    set_torque(axis, T)
+    axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
+    print("Axis in closed-loop torque control mode")
+    return
+
+def end_closed_loop_control(axis):
+    set_rpm(axis, 0.0)
+    set_torque(axis, 0.0)
+    axis.requested_state = AxisState.IDLE
+    print("Axis in idle mode")
+    return
+
+def is_safe():
     try:
-        revs_per_sec = axis.encoder.vel_estimate
-        return revs_per_sec * 60.0
-    except Exception:
-        return 0.0
-
-
-def set_torque(axis, torque_nm):
-    # ODrive controller accepts torque setpoint in Nm via axis.controller.input_torque
-    axis.controller.input_torque = float(torque_nm)
-
-
-def safe_check(axis):
-    # read some safety telemetry and return False if unsafe
-    try:
-        iq = abs(axis.motor.foc.Iq_measured)
-        rpm = abs(rpm_from_velocity(axis))
-        if iq > MAX_CURRENT_A + 2.0:
-            print("SAFETY: measured current too high:", iq)
+        if abs(get_current(axis)) > MAX_CURRENT:
+            print("Unsafe condition: current exceeds maximum current")
             return False
-        if rpm > MAX_RPM + 100.0:
-            print("SAFETY: RPM too high:", rpm)
+        
+        if abs(get_rpm(axis)) > MAX_RPM:
+            print("Unsafe condition: RPM exceeds maximum RPM")
             return False
+        
     except Exception as e:
-        print("Safety read error:", e)
+        print("Unsafe Condition:", e)
+        return False
+    
     return True
 
+if __name__ == "__main__":
+    print("Intenal Combustion(ICE) Unit Control Program")
+    print("Initializing...")
+    odrv, axis = find_odrive()
+    print("Initialization Complete")
 
-def main_loop():
+    print("Starting state machine...")
+    print("Mode: STARTING")
+    mode = "STARTING"
+    start_closed_loop_torque_control(axis, 0.0)
+
+    while running:
+        if not is_safe():
+            raise SystemExit("Unsafe condition: exiting now...")
+
+        if mode == "STARTING":
+            if get_rpm(axis) >= STARTING_RPM_THRESHOLD:
+                set_torque(axis, CRANK_TORQUE)
+            else:
+                set_torque(axis, 0.0)
+            if get_rpm(axis) >= RUNNING_RPM_THRESHOLD:
+                start_closed_loop_rpm_control(axis, RUNNING_RPM)
+                print(f"ICE startup detected at {get_rpm(axis)} rpm, switching to running mode...")
+                print("Mode: RUNNING")
+                mode = "RUNNING"
+
+        elif mode == "RUNNING":
+            if get_rpm(axis) <= SHUTDOWN_RPM_THRESHOLD or keyboard.is_pressed('q'):
+                print(f"ICE Shutdown initiated at {get_rpm(axis)} rpm")
+                set_rpm(axis, 0.0)
+                end_closed_loop_control(axis)
+                raise SystemExit("Shutdown complete: exiting now...")
+
+        else:
+            raise SystemExit("Undefined state: check program, exiting now...")
+
+    end_closed_loop_control(axis)
+    print("Exited Intenal Combustion(ICE) Unit Control Program: End of Program")
     odrv0, axis = find_odrive_and_axis()
 
     # Ensure closed loop
@@ -156,7 +212,3 @@ def main_loop():
     except Exception:
         pass
     print("ICE controller exiting cleanly.")
-
-
-if __name__ == "__main__":
-    main_loop()

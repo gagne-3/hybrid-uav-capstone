@@ -1,6 +1,17 @@
 import math
 import odrive
 from odrive.enums import AxisState, ControlMode
+import datetime
+import csv
+
+startTime = datetime.now()
+
+logDate = startTime.strftime('%m%d%Y-%H%M%S%f')
+filename = 'gen_log_' + logDate + '.csv'
+
+log = open(filename, 'a', newline='')
+logWriter = csv.writer(log)
+logWriter.writerow(['Time (s)', 'Mode', 'Velocity (rpm)', 'Velocity Setpoint (rpm)', 'Torque (A)', 'Torque Setpoint (A)', 'Current (A)'])
 
 ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
 
@@ -24,6 +35,14 @@ def find_odrive():
     axis.requested_state = AxisState.IDLE
 
     return odrv, axis
+
+def get_time():
+    dT = datetime.now() - startTime
+    return dT.total_seconds()
+
+def write_log(axis):
+    logWriter.writerow([get_time(), mode, get_rpm(axis), 0, get_torque(axis), axis.controller.input_torque, get_current(axis)])
+    return
 
 def get_rpm(axis):
     rpm = axis.vel_estimate * 60.0 # convert Rev/s to RPM
@@ -91,6 +110,8 @@ if __name__ == "__main__":
     while running:
         if not is_safe():
             raise SystemExit("Unsafe condition: exiting now...")
+        
+        write_log(axis)
 
         if mode == "IDLE":
             print("Please select next step:")

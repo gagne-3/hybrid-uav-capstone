@@ -25,7 +25,6 @@ RUNNING_RPM = 2000           # Speed at which the ICE runs at
 SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
 
 running = True
-mode = "IDLE"
 
 def get_time():
     dT = datetime.now() - startTime

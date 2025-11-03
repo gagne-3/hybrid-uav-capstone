@@ -26,6 +26,14 @@ SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stoppe
 running = True
 mode = "IDLE"
 
+def get_time():
+    dT = datetime.now() - startTime
+    return dT.total_seconds()
+
+def write_log(axis):
+    logWriter.writerow([get_time(), mode, get_rpm(axis), 0, get_torque(axis), axis.controller.input_torque, get_current(axis)])
+    return
+
 def find_odrive():
     print(f"Searching for ODrive: {ODRV_SN}")
     odrv = odrive.find_sync(serial_number=ODRV_SN, timeout=10)
@@ -35,14 +43,6 @@ def find_odrive():
     axis.requested_state = AxisState.IDLE
 
     return odrv, axis
-
-def get_time():
-    dT = datetime.now() - startTime
-    return dT.total_seconds()
-
-def write_log(axis):
-    logWriter.writerow([get_time(), mode, get_rpm(axis), 0, get_torque(axis), axis.controller.input_torque, get_current(axis)])
-    return
 
 def get_rpm(axis):
     rpm = axis.vel_estimate * 60.0 # convert Rev/s to RPM

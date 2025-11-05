@@ -17,7 +17,6 @@ SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stoppe
 log = odrive_log("ice")
 
 running = True
-mode = "IDLE"
 
 def find_odrive():
     print(f"Searching for ODrive: {ODRV_SN}")

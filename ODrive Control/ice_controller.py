@@ -4,7 +4,7 @@ import keyboard
 from odrive.enums import AxisState, ControlMode, InputMode
 from odrive_log import odrive_log
 
-ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
+ODRV_SN = "003cf674534b"
 
 MAX_CURRENT = 20.0           # Absolute maximum input/output current to/from the motor
 CRANK_TORQUE = -5.0          # negative torque (Nm) applied during cranking

@@ -3,7 +3,7 @@ import odrive
 from odrive.enums import AxisState, ControlMode
 from odrive_log import odrive_log
 
-ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
+ODRV_SN = "003cf674472e"
 
 MAX_CURRENT = 20.0 # Absolute maximum input/output current to/from the motor
 CRANKING_TORQUE = 15.0 # Applied torque when cranking ICE, Amps

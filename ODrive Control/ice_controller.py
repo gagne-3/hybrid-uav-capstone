@@ -2,17 +2,7 @@ import math
 import odrive
 import keyboard
 from odrive.enums import AxisState, ControlMode, InputMode
-import datetime
-import csv
-
-startTime = datetime.now()
-
-logDate = startTime.strftime('%m%d%Y-%H%M%S%f')
-filename = 'ice_log_' + logDate + '.csv'
-
-log = open(filename, 'a', newline='')
-logWriter = csv.writer(log)
-logWriter.writerow(['Time (s)', 'Mode', 'Velocity (rpm)', 'Velocity Setpoint (rpm)', 'Torque (A)', 'Torque Setpoint (A)', 'Current (A)'])
+from odrive_log import odrive_log
 
 ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
 
@@ -24,16 +14,10 @@ RUNNING_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be runnin
 RUNNING_RPM = 2000           # Speed at which the ICE runs at
 SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
 
+log = odrive_log("ice")
+
 running = True
 mode = "IDLE"
-
-def get_time():
-    dT = datetime.now() - startTime
-    return dT.total_seconds()
-
-def write_log(axis):
-    logWriter.writerow([get_time(), mode, get_rpm(axis), 0, get_torque(axis), axis.controller.input_torque, get_current(axis)])
-    return
 
 def find_odrive():
     print(f"Searching for ODrive: {ODRV_SN}")
@@ -116,7 +100,7 @@ def is_safe():
     return True
 
 if __name__ == "__main__":
-    print("Intenal Combustion(ICE) Unit Control Program")
+    print("Internal Combustion Engine (ICE) Control Program")
     print("Initializing...")
     odrv, axis = find_odrive()
     print("Initialization Complete")
@@ -130,7 +114,7 @@ if __name__ == "__main__":
         if not is_safe():
             raise SystemExit("Unsafe condition: exiting now...")
         
-        write_log(axis)
+        log.logData(mode, odrv, axis)
 
         if mode == "STARTING":
             if get_rpm(axis) >= STARTING_RPM_THRESHOLD:

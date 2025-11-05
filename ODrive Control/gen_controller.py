@@ -1,17 +1,7 @@
 import math
 import odrive
 from odrive.enums import AxisState, ControlMode
-import datetime
-import csv
-
-startTime = datetime.now()
-
-logDate = startTime.strftime('%m%d%Y-%H%M%S%f')
-filename = 'gen_log_' + logDate + '.csv'
-
-log = open(filename, 'a', newline='')
-logWriter = csv.writer(log)
-logWriter.writerow(['Time (s)', 'Mode', 'Velocity (rpm)', 'Velocity Setpoint (rpm)', 'Torque (A)', 'Torque Setpoint (A)', 'Current (A)'])
+from odrive_log import odrive_log
 
 ODRV_SN = "3348373D3432" # Generic Serial Number, Change This
 
@@ -23,16 +13,10 @@ MAX_RPM = 3000 # Absolute maximum RPM of motor
 STARTUP_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
 SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
 
+log = odrive_log("gen")
+
 running = True
 mode = "IDLE"
-
-def get_time():
-    dT = datetime.now() - startTime
-    return dT.total_seconds()
-
-def write_log(axis):
-    logWriter.writerow([get_time(), mode, get_rpm(axis), 0, get_torque(axis), axis.controller.input_torque, get_current(axis)])
-    return
 
 def find_odrive():
     print(f"Searching for ODrive: {ODRV_SN}")
@@ -111,7 +95,7 @@ if __name__ == "__main__":
         if not is_safe():
             raise SystemExit("Unsafe condition: exiting now...")
         
-        write_log(axis)
+        log.logData(mode, odrv, axis)
 
         if mode == "IDLE":
             print("Please select next step:")

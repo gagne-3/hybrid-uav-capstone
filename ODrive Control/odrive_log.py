@@ -87,6 +87,7 @@ class odrive_log:
             data = [self.getTime(), mode, self.checkAxisState(axis), self.checkControlMode(axis), self.get_rpm(axis), self.get_vel_setpoint(axis), self.get_torque(axis), self.get_torque_setpoint(axis),
                     self.get_current(axis), self.get_mech_power(axis), self.get_elec_power(axis), self.get_bus_voltage(odrv), self.get_bus_current(odrv), self.get_br_current(odrv)]
             self.writeRow(data)
+            self.lastTime = datetime.now()
             return
         else:
             return

@@ -120,6 +120,7 @@ if __name__ == "__main__":
                 set_torque(axis, CRANK_TORQUE)
             else:
                 set_torque(axis, 0.0)
+
             if get_rpm(axis) >= RUNNING_RPM_THRESHOLD:
                 start_closed_loop_rpm_control(axis, RUNNING_RPM)
                 print(f"ICE startup detected at {get_rpm(axis)} rpm, switching to running mode...")

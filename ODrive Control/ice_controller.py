@@ -4,12 +4,12 @@ import keyboard
 from odrive.enums import AxisState, ControlMode, InputMode
 from odrive_log import odrive_log
 
-ODRV_SN = "003cf674534b"
+ODRV_SN = "003CF674534B"
 
 MAX_CURRENT = 20.0           # Absolute maximum input/output current to/from the motor
-CRANK_TORQUE = -5.0          # negative torque (Nm) applied during cranking
+CRANK_TORQUE = -1.0          # negative torque (Nm) applied during cranking
 MAX_RPM = 3000               # Absolute maximum RPM of motor
-STARTING_RPM_THRESHOLD = 150   # Speed at which ICE can be determined to be starting
+STARTING_RPM_THRESHOLD = 150 # Speed at which ICE can be determined to be starting
 RUNNING_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
 RUNNING_RPM = 2000           # Speed at which the ICE runs at
 SHUTDOWN_RPM_THRESHOLD = 300 # Speed at which ICE can be determined to be stopped
@@ -56,7 +56,7 @@ def set_rpm(axis, rpm):
 def set_torque(axis, T):
     if axis.controller.config.control_mode == ControlMode.TORQUE_CONTROL:
         axis.controller.input_torque = T
-        print(f"Axis torque set to {T}")
+        # print(f"Axis torque set to {T}")
     else:
         print("Warning: axis not in torque control mode. Unable to set desired torque.")
     return
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         if not is_safe():
             raise SystemExit("Unsafe condition: exiting now...")
         
-        log.logData(mode, odrv, axis)
+        # qlog.logData(mode, odrv, axis)
 
         if mode == "STARTING":
             if get_rpm(axis) >= STARTING_RPM_THRESHOLD:

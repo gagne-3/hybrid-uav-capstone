@@ -9,7 +9,7 @@ ODRV_SN = "003cf674534b"
 MAX_CURRENT = 20.0           # Absolute maximum input/output current to/from the motor
 CRANK_TORQUE = -5.0          # negative torque (Nm) applied during cranking
 MAX_RPM = 3000               # Absolute maximum RPM of motor
-STARTING_RPM_THRESHOLD = 1   # Speed at which ICE can be determined to be starting
+STARTING_RPM_THRESHOLD = 60  # Speed at which ICE can be determined to be starting
 RUNNING_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
 RUNNING_RPM = 2000           # Speed at which the ICE runs at
 SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
@@ -120,6 +120,7 @@ if __name__ == "__main__":
                 set_torque(axis, CRANK_TORQUE)
             else:
                 set_torque(axis, 0.0)
+
             if get_rpm(axis) >= RUNNING_RPM_THRESHOLD:
                 start_closed_loop_rpm_control(axis, RUNNING_RPM)
                 print(f"ICE startup detected at {get_rpm(axis)} rpm, switching to running mode...")

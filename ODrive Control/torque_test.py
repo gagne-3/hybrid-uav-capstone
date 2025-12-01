@@ -27,6 +27,10 @@ def get_rpm(axis):
     rpm = axis.vel_estimate * 60.0 # convert Rev/s to RPM
     return rpm
 
+def get_current(axis):
+    Iq = axis.motor.foc.Iq_measured
+    return Iq
+
 def set_torque(axis, T):
     if axis.controller.config.control_mode == ControlMode.TORQUE_CONTROL:
         axis.controller.input_torque = T
@@ -72,7 +76,7 @@ if __name__ == "__main__":
 
     print("Running")
     print("Mode: RUNNING")
-    mode = "STARTING"
+    mode = "RUNNING"
     start_closed_loop_torque_control(axis, 0.0)
 
     while running:
@@ -80,7 +84,7 @@ if __name__ == "__main__":
             raise SystemExit("Unsafe condition: exiting now...")
         if mode == "RUNNING":
             for SET_TORQUE in [0.5, 1.0, 2.0, 4.0]:
-                print(f"Setting torque to {SET_TORQUE} Nm")
+                print(f"Setting torque to {SET_TORQUE} A")
                 set_torque(axis, SET_TORQUE)
                 time.sleep(5)
             running = False

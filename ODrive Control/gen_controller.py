@@ -3,15 +3,15 @@ import odrive
 from odrive.enums import AxisState, ControlMode
 from odrive_log import odrive_log
 
-ODRV_SN = "003cf674472e"
+ODRV_SN = "003cf674472e" # ADD NEW ODrive Serial Number Here !!!!!!!!
 
 MAX_CURRENT = 20.0 # Absolute maximum input/output current to/from the motor
-CRANKING_TORQUE = 15.0 # Applied torque when cranking ICE, Amps
-GENERATING_TORQUE = -10.0 # Applied torque when generating, Amps
+CRANKING_TORQUE = 1.83 # Applied torque when cranking ICE, Nm
+GENERATING_TORQUE = -1.22 # Applied torque when generating, Nm
 
 MAX_RPM = 3000 # Absolute maximum RPM of motor
-STARTUP_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
-SHUTDOWN_RPM_THRESHOLD = 100 # Speed at which ICE can be determined to be stopped
+STARTUP_RPM_THRESHOLD = 1000 # Speed at which ICE can be determined to be running
+SHUTDOWN_RPM_THRESHOLD = 200 # Speed at which ICE can be determined to be stopped
 
 log = odrive_log("gen")
 

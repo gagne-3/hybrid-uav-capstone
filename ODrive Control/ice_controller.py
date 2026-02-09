@@ -10,9 +10,9 @@ MAX_CURRENT = 20.0           # Absolute maximum input/output current to/from the
 CRANK_TORQUE = -1.0          # negative torque (Nm) applied during cranking
 MAX_RPM = 3000               # Absolute maximum RPM of motor
 STARTING_RPM_THRESHOLD = 150 # Speed at which ICE can be determined to be starting
-RUNNING_RPM_THRESHOLD = 1500 # Speed at which ICE can be determined to be running
-RUNNING_RPM = 2000           # Speed at which the ICE runs at
-SHUTDOWN_RPM_THRESHOLD = 300 # Speed at which ICE can be determined to be stopped
+RUNNING_RPM_THRESHOLD = 1000 # Speed at which ICE can be determined to be running
+RUNNING_RPM = 1500           # Speed at which the ICE runs at
+SHUTDOWN_RPM_THRESHOLD = 200 # Speed at which ICE can be determined to be stopped
 
 log = odrive_log("ice")
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         if not is_safe():
             raise SystemExit("Unsafe condition: exiting now...")
         
-        # qlog.logData(mode, odrv, axis)
+        log.logData(mode, odrv, axis)
 
         if mode == "STARTING":
             if get_rpm(axis) >= STARTING_RPM_THRESHOLD:
